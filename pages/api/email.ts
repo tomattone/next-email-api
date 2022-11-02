@@ -6,17 +6,6 @@ import formData from 'form-data'
 import Mailgun from 'mailgun.js'
 import multiparty from 'multiparty'
 
-type EmailProps = {
-  to: string
-  as: string
-  from: string
-  cc?: string
-  bcc?: string
-  subject: string
-  message: string
-  attach?: File
-}
-
 type ResponseProps = {
   status: number
   message?: string
@@ -29,6 +18,7 @@ export default async function handler(
   // Wrong http method
   if (req.method !== 'POST') {
     res.status(400).json({ status: 400, message: 'Wrong http method' })
+    return false
   }
 
   try {
