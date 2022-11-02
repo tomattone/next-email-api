@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-import fs from 'fs'
 import { readFile } from 'fs/promises'
 
 import formData from 'form-data'
@@ -41,12 +40,7 @@ export default async function handler(
     })
 
     // 2 - Setup Multiparty library
-    if (!fs.existsSync('./public/uploads')) {
-      fs.mkdirSync('./public/uploads')
-    }
-    const form = new multiparty.Form({
-      uploadDir: './public/uploads/',
-    })
+    const form = new multiparty.Form()
 
     // 2.1 - Get data from request
     const data: any = await new Promise((resolve, reject) => {
