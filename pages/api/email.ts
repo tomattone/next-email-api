@@ -27,6 +27,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseProps>
 ) {
+  // Wrong http method
+  if (req.method !== 'POST') {
+    res.status(400).json({ status: 400, message: 'Wrong http method' })
+  }
+
   try {
     // 1 - Setup Mailgun library
     const mailgun = new Mailgun(formData)
@@ -73,11 +78,6 @@ export default async function handler(
           },
         ]
       : null
-
-    // Wrong http method
-    if (req.method !== 'POST') {
-      res.status(400).json({ status: 400, message: 'Not found' })
-    }
 
     // 5 - Send email
     const sendResult: ResponseProps = await mg.messages.create(domain, {
