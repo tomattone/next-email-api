@@ -5,6 +5,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: '/',
+        destination: '/api/email',
+        permanent: true,
+      },
+      {
         source: '/email',
         destination: '/api/email',
         permanent: true,
