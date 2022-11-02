@@ -1,6 +1,9 @@
 {
   "name": "next-email-api",
   "version": "0.1.0",
+  "description": "Send transactionals emails with Mailgun API and Next.js (not spams 😅)",
+  "author": "Armando Tomazzoni Junior",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev",
