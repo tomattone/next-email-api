@@ -6,12 +6,12 @@ const nextConfig = {
     return [
       {
         source: '/',
-        destination: 'https://api.agenciaade.com.br/api/email',
+        destination: '/api/email',
         permanent: true,
       },
       {
         source: '/email',
-        destination: 'https://api.agenciaade.com.br/api/email',
+        destination: '/api/email',
         permanent: true,
       },
     ]

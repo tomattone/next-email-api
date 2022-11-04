@@ -1,10 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-import { readFile } from 'fs/promises'
-
 import formData from 'form-data'
 import Mailgun from 'mailgun.js'
-import multiparty from 'multiparty'
 
 type ResponseProps = {
   status: number
@@ -29,41 +26,19 @@ export default async function handler(
       key: process.env.MAILGUN_API_KEY || 'or_put_your_api_key_here',
     })
 
-    // 2 - Setup Multiparty library
-    const form = new multiparty.Form()
-
-    // 2.1 - Get data from request
-    const data: any = await new Promise((resolve, reject) => {
-      form.parse(req, function (err, fields, files) {
-        if (err) {
-          res.status(400).json({ status: 500, message: err.message })
-          reject({ err })
-        }
-        resolve({ fields, files })
-      })
-    })
-
-    // 3 - Setup required fields
+    // 2 - Setup required fields
     const domain = 'api.agenciaade.com.br'
-    const fromEmail = `${data.fields.as[0]} <api@agenciaade.com.br>`
-    const replyToEmail = `${data.fields.as[0]} <${data.fields.from[0]}>`
-    const toEmails = data.fields.to
-    const subject = data.fields.subject[0]
-    const message = data.fields.message[0]
+    const fromEmail = `${req.body.as} <api@agenciaade.com.br>`
+    const replyToEmail = `${req.body.as} <${req.body.from}>`
+    const toEmails = req.body.to
+    const subject = req.body.subject
+    const message = req.body.message
 
-    // 4 - Setup optional fields
-    const ccEmails = data.fields.cc ? data.fields.cc : []
-    const bccEmails = data.fields.bcc ? data.fields.bcc : []
-    const attachFile = data.files.attach
-      ? [
-          {
-            filename: data.files.attach[0].originalFilename,
-            data: await readFile(data.files.attach[0].path),
-          },
-        ]
-      : null
+    // 3 - Setup optional fields
+    const ccEmails = req.body.cc ? req.body.cc : []
+    const bccEmails = req.body.bcc ? req.body.bcc : []
 
-    // 5 - Send email
+    // 4 - Send email
     const sendResult: ResponseProps = await mg.messages.create(domain, {
       from: fromEmail,
       to: toEmails,
@@ -73,7 +48,6 @@ export default async function handler(
       subject: subject,
       html: message,
       text: message.replace(/(<([^>]+)>)/gi, ''),
-      attachment: attachFile,
     })
     res.status(200).json({
       status: sendResult.status,
@@ -82,10 +56,4 @@ export default async function handler(
   } catch (error: any) {
     res.status(400).json({ status: 400, message: error.message })
   }
-}
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
 }
