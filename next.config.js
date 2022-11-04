@@ -7,10 +7,12 @@ const nextConfig = {
       {
         source: '/',
         destination: 'https://api.agenciaade.com.br/email',
+        permanent: true,
       },
       {
         source: '/email',
         destination: 'https://api.agenciaade.com.br/email',
+        permanent: true,
       },
     ]
   },
