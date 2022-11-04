@@ -47,7 +47,7 @@ POST /email
 
 <br />
 
-# Send a e-mail with attachments
+# Send an e-mail with attachments
 
 ```http
 POST /email-attach
