@@ -8,7 +8,26 @@ type ResponseProps = {
   message?: string
 }
 
-export default async function handler(
+const allowCors =
+  (fn: any) => async (req: NextApiRequest, res: NextApiResponse) => {
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader(
+      'Access-Control-Allow-Methods',
+      'GET,OPTIONS,PATCH,DELETE,POST,PUT'
+    )
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    )
+    if (req.method === 'OPTIONS') {
+      res.status(200).end()
+      return
+    }
+    return await fn(req, res)
+  }
+
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseProps>
 ) {
@@ -17,18 +36,6 @@ export default async function handler(
     res.status(400).json({ status: 400, message: 'Wrong http method' })
     return false
   }
-
-  // Cors
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    'GET,OPTIONS,PATCH,DELETE,POST,PUT'
-  )
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  )
 
   try {
     // 1 - Setup Mailgun library
@@ -69,3 +76,5 @@ export default async function handler(
     res.status(400).json({ status: 400, message: error.message })
   }
 }
+
+export default allowCors(handler)
