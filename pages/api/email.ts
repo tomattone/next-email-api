@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import NextCors from 'nextjs-cors'
 
 import { readFile } from 'fs/promises'
 
@@ -20,6 +21,13 @@ export default async function handler(
     res.status(400).json({ status: 400, message: 'Wrong http method' })
     return false
   }
+
+  // Cors
+  await NextCors(req, res, {
+    methods: ['POST'],
+    origin: '*',
+    optionsSuccessStatus: 200,
+  })
 
   try {
     // 1 - Setup Mailgun library
