@@ -3,29 +3,12 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import formData from 'form-data'
 import Mailgun from 'mailgun.js'
 
+import cors from '../../utils/cors'
+
 type ResponseProps = {
   status: number
   message?: string
 }
-
-const allowCors =
-  (fn: any) => async (req: NextApiRequest, res: NextApiResponse) => {
-    res.setHeader('Access-Control-Allow-Credentials', 'true')
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader(
-      'Access-Control-Allow-Methods',
-      'GET,OPTIONS,PATCH,DELETE,POST,PUT'
-    )
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-    )
-    if (req.method === 'OPTIONS') {
-      res.status(200).end()
-      return
-    }
-    return await fn(req, res)
-  }
 
 async function handler(
   req: NextApiRequest,
@@ -34,6 +17,12 @@ async function handler(
   // Wrong http method
   if (req.method !== 'POST') {
     res.status(400).json({ status: 400, message: 'Wrong http method' })
+    return false
+  }
+
+  // Wrong content-type
+  if (req.headers['content-type'] != 'application/json') {
+    res.status(400).json({ status: 400, message: 'Wrong content-type' })
     return false
   }
 
@@ -77,4 +66,4 @@ async function handler(
   }
 }
 
-export default allowCors(handler)
+export default cors(handler)
