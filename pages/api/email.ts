@@ -36,7 +36,7 @@ async function handler(
 
     // 2 - Setup required fields
     const domain = 'api.agenciaade.com.br'
-    const fromEmail = `${req.body.as} <api@agenciaade.com.br>`
+    const fromEmail = `${req.body.as} <${req.body.from}>`
     const replyToEmail = `${req.body.as} <${req.body.from}>`
     const toEmails = req.body.to
     const subject = req.body.subject
