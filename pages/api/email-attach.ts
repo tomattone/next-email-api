@@ -51,7 +51,7 @@ async function handler(
     })
 
     // 3 - Setup required fields
-    const domain = 'api.agenciaade.com.br'
+    const domain = 'api.tomazzoni.net'
     const fromEmail = `${data.fields.as[0]} <${data.fields.from[0]}>`
     const replyToEmail = `${data.fields.as[0]} <${data.fields.from[0]}>`
     const toEmails = data.fields.to
