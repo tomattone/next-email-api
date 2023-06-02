@@ -1,10 +1,13 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-
-import { readFile } from 'fs/promises'
-
-import formData from 'form-data'
-import Mailgun from 'mailgun.js'
+import fs from 'fs'
+import {
+  Attachment,
+  EmailParams,
+  MailerSend,
+  Recipient,
+  Sender,
+} from 'mailersend'
 import multiparty from 'multiparty'
+import type { NextApiRequest, NextApiResponse } from 'next'
 
 import cors from '../../utils/cors'
 
@@ -29,11 +32,9 @@ async function handler(
   }
 
   try {
-    // 1 - Setup Mailgun library
-    const mailgun = new Mailgun(formData)
-    const mg = mailgun.client({
-      username: 'api',
-      key: process.env.MAILGUN_API_KEY || 'or_put_your_api_key_here',
+    // 1 - Setup MailerSend library
+    const mailerSend = new MailerSend({
+      apiKey: process.env.MAILERSEND_API_KEY || '',
     })
 
     // 2 - Setup Multiparty library
@@ -49,45 +50,53 @@ async function handler(
         resolve({ fields, files })
       })
     })
+    const { fields, files } = data
 
     // 3 - Setup required fields
-    const domain = 'api.tomazzoni.net'
-    const fromEmail = `${data.fields.as[0]} <${data.fields.from[0]}>`
-    const replyToEmail = `${data.fields.as[0]} <${data.fields.from[0]}>`
-    const toEmails = data.fields.to
-    const subject = data.fields.subject[0]
-    const message = data.fields.message[0]
+    const subject = fields.subject[0]
+    const message = fields.message[0]
+    const replyTo = new Sender(fields.from[0], fields.as[0])
+    const recipients = [new Recipient(fields.to[0])]
+    const sentFrom = new Sender(
+      'api-mailersend-transaction@tomazzoni.net',
+      fields.as[0]
+    )
 
     // 4 - Setup optional fields
-    const ccEmails = data.fields.cc ? data.fields.cc : []
-    const bccEmails = data.fields.bcc ? data.fields.bcc : []
-    const attachFile = data.files.attach
+    const cc = fields.cc ? [new Recipient(fields.cc)] : []
+    const bcc = fields.bcc ? [new Recipient(fields.bcc)] : []
+    const attachments = files.attach
       ? [
-          {
-            filename: data.files.attach[0].originalFilename,
-            data: await readFile(data.files.attach[0].path),
-          },
+          new Attachment(
+            fs.readFileSync(files.attach[0].path, { encoding: 'base64' }),
+            files.attach[0].originalFilename,
+            'attachment'
+          ),
         ]
-      : null
+      : []
 
     // 5 - Send email
-    const sendResult: ResponseProps = await mg.messages.create(domain, {
-      from: fromEmail,
-      to: toEmails,
-      'h:Reply-To': replyToEmail,
-      cc: ccEmails,
-      bcc: bccEmails,
-      subject: subject,
-      html: message,
-      text: message.replace(/(<([^>]+)>)/gi, ''),
-      attachment: attachFile,
-    })
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setReplyTo(replyTo)
+      .setTo(recipients)
+      .setCc(cc)
+      .setBcc(bcc)
+      .setSubject(subject)
+      .setHtml(message)
+      .setText(message.replace(/(<([^>]+)>)/gi, ''))
+      .setAttachments(attachments)
+
+    await mailerSend.email.send(emailParams)
+
+    // 6 - Send response
     res.status(200).json({
-      status: sendResult.status,
-      message: sendResult.message,
+      status: 200,
+      message: 'Queued. Thank you.',
     })
   } catch (error: any) {
-    res.status(400).json({ status: 400, message: error.message })
+    // 7 - Shit happens
+    res.status(400).json({ status: 400, message: error.body.message })
   }
 }
 

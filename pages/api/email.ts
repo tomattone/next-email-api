@@ -1,7 +1,5 @@
+import { EmailParams, MailerSend, Recipient, Sender } from 'mailersend'
 import type { NextApiRequest, NextApiResponse } from 'next'
-
-import formData from 'form-data'
-import Mailgun from 'mailgun.js'
 
 import cors from '../../utils/cors'
 
@@ -27,42 +25,46 @@ async function handler(
   }
 
   try {
-    // 1 - Setup Mailgun library
-    const mailgun = new Mailgun(formData)
-    const mg = mailgun.client({
-      username: 'api',
-      key: process.env.MAILGUN_API_KEY || 'or_put_your_api_key_here',
+    // 1 - Setup MailerSend library
+    const mailerSend = new MailerSend({
+      apiKey: process.env.MAILERSEND_API_KEY || '',
     })
 
     // 2 - Setup required fields
-    const domain = 'api.tomazzoni.net'
-    const fromEmail = `${req.body.as} <${req.body.from}>`
-    const replyToEmail = `${req.body.as} <${req.body.from}>`
-    const toEmails = req.body.to
     const subject = req.body.subject
     const message = req.body.message
+    const replyTo = new Sender(req.body.from, req.body.as)
+    const recipients = [new Recipient(req.body.to)]
+    const sentFrom = new Sender(
+      'api-mailersend-transaction@tomazzoni.net',
+      req.body.as
+    )
 
     // 3 - Setup optional fields
-    const ccEmails = req.body.cc ? req.body.cc : []
-    const bccEmails = req.body.bcc ? req.body.bcc : []
+    const cc = req.body.cc ? [new Recipient(req.body.cc)] : []
+    const bcc = req.body.bcc ? [new Recipient(req.body.bcc)] : []
 
     // 4 - Send email
-    const sendResult: ResponseProps = await mg.messages.create(domain, {
-      from: fromEmail,
-      to: toEmails,
-      'h:Reply-To': replyToEmail,
-      cc: ccEmails,
-      bcc: bccEmails,
-      subject: subject,
-      html: message,
-      text: message.replace(/(<([^>]+)>)/gi, ''),
-    })
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setReplyTo(replyTo)
+      .setTo(recipients)
+      .setCc(cc)
+      .setBcc(bcc)
+      .setSubject(subject)
+      .setHtml(message)
+      .setText(message.replace(/(<([^>]+)>)/gi, ''))
+
+    await mailerSend.email.send(emailParams)
+
+    // 5 - Send response
     res.status(200).json({
-      status: sendResult.status,
-      message: sendResult.message,
+      status: 200,
+      message: 'Queued. Thank you.',
     })
   } catch (error: any) {
-    res.status(400).json({ status: 400, message: error.message })
+    // 6 - Shit happens
+    res.status(400).json({ status: 400, message: error.body.message })
   }
 }
 
