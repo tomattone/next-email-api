@@ -30,21 +30,52 @@ async function handler(
       apiKey: process.env.MAILERSEND_API_KEY || '',
     })
 
-    // 2 - Setup required fields
+    // 2 - Set recipients
+    let recipients: any = []
+    if (req.body.to) {
+      if (!Array.isArray(req.body.to)) {
+        recipients = [new Recipient(req.body.to)]
+      } else {
+        req.body.to.forEach((recipient: string) => {
+          recipients.push(new Recipient(recipient))
+        })
+      }
+    }
+
+    // 3 - Set carbon copy
+    let cc: any = []
+    if (req.body.cc) {
+      if (!Array.isArray(req.body.cc)) {
+        cc = [new Recipient(req.body.cc)]
+      } else {
+        req.body.cc.forEach((recipient: string) => {
+          cc.push(new Recipient(recipient))
+        })
+      }
+    }
+
+    // 4 - Set blind carbon copy
+    let bcc: any = []
+    if (req.body.bcc) {
+      if (!Array.isArray(req.body.bcc)) {
+        bcc = [new Recipient(req.body.bcc)]
+      } else {
+        req.body.bcc.forEach((recipient: string) => {
+          bcc.push(new Recipient(recipient))
+        })
+      }
+    }
+
+    // 5 - Setup required fields
     const subject = req.body.subject
     const message = req.body.message
     const replyTo = new Sender(req.body.from, req.body.as)
-    const recipients = [new Recipient(req.body.to)]
     const sentFrom = new Sender(
       'api-mailersend-transaction@tomazzoni.net',
       req.body.as
     )
 
-    // 3 - Setup optional fields
-    const cc = req.body.cc ? [new Recipient(req.body.cc)] : []
-    const bcc = req.body.bcc ? [new Recipient(req.body.bcc)] : []
-
-    // 4 - Send email
+    // 6 - Send email
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
       .setReplyTo(replyTo)
@@ -57,13 +88,13 @@ async function handler(
 
     await mailerSend.email.send(emailParams)
 
-    // 5 - Send response
+    // 7 - Send response
     res.status(200).json({
       status: 200,
       message: 'Queued. Thank you.',
     })
   } catch (error: any) {
-    // 6 - Shit happens
+    // 8 - Shit happens
     res.status(400).json({ status: 400, message: error.body.message })
   }
 }
