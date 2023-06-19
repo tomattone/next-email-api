@@ -12,7 +12,7 @@
   </h1>
   <div>
     <br />
-    Send transactionals emails with Mailgun (https://mailgun.com) and Next.js (https://nextjs.org) (not spams 😅).
+    Send transactionals emails with Mailersend (https://mailersend.com) and Next.js (https://nextjs.org) (not spams 😅).
     <br />
     <br />
   
@@ -25,7 +25,7 @@
 
 # Set-up
 
-Copy `.env.example` to `.env` and add your mailgun token. [Get your token here](https://app.mailgun.com/app/account/security/api_keys).
+Copy `.env.example` to `.env` and add your mailersend token. [Get your token here](https://www.mailersend.com/help/managing-api-tokens).
 <br /><br />
 
 # Send a simple e-mail
