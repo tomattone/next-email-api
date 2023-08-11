@@ -67,6 +67,7 @@ async function handler(
     const cc = fields.cc ? [new Recipient(fields.cc)] : []
     const bcc = fields.bcc ? [new Recipient(fields.bcc)] : []
 
+    // 4.1 - multi attach
     const attachments: any = [];
     if (files.attach && Array.isArray(files.attach)) {
       attachments.push(
