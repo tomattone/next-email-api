@@ -20,6 +20,7 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseProps>
 ) {
+
   // Wrong http method
   if (req.method !== 'POST') {
     res.status(400).json({ status: 400, message: 'Wrong http method' })
@@ -65,15 +66,16 @@ async function handler(
     // 4 - Setup optional fields
     const cc = fields.cc ? [new Recipient(fields.cc)] : []
     const bcc = fields.bcc ? [new Recipient(fields.bcc)] : []
-    const attachments = files.attach
-      ? [
-          new Attachment(
-            fs.readFileSync(files.attach[0].path, { encoding: 'base64' }),
-            files.attach[0].originalFilename,
-            'attachment'
-          ),
-        ]
-      : []
+
+    const attachments: any = [];
+    if (files.attach && Array.isArray(files.attach)) {
+      attachments.push(
+        ...files.attach.map((attachFile: { path: string, originalFilename: string }) => {
+          const fileContent = fs.readFileSync(attachFile.path, { encoding: 'base64' });
+          return new Attachment(fileContent, attachFile.originalFilename, 'attachment');
+        })
+      );
+    }
 
     // 5 - Send email
     const emailParams = new EmailParams()
