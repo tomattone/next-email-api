@@ -66,16 +66,21 @@ async function handler(
       }
     }
 
-    // 5 - Setup required fields
+    // 5 - Set reply to
+    let replyTo = new Sender(req.body.from, req.body.as)
+    if (req.body.replyTo) {
+      replyTo = new Sender(req.body.replyTo)
+    }
+
+    // 6 - Setup required fields
     const subject = req.body.subject
     const message = req.body.message
-    const replyTo = new Sender(req.body.from, req.body.as)
     const sentFrom = new Sender(
       'api-mailersend-transaction@tomazzoni.net',
       req.body.as
     )
 
-    // 6 - Send email
+    // 7 - Send email
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
       .setReplyTo(replyTo)
@@ -88,13 +93,13 @@ async function handler(
 
     await mailerSend.email.send(emailParams)
 
-    // 7 - Send response
+    // 8 - Send response
     res.status(200).json({
       status: 200,
       message: 'Queued. Thank you.',
     })
   } catch (error: any) {
-    // 8 - Shit happens
+    // 9 - Shit happens
     res.status(400).json({ status: 400, message: error.body.message })
   }
 }

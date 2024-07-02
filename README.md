@@ -39,6 +39,7 @@ POST /email
 | `header[content-type]` | `STRING` | yes       | Content-type                | `application/json`                                              |
 | `to`                   | `ARRAY`  | yes       | Address to                  | `test@example.com` or `[test1@example.com, test2@example.com]`  |
 | `from`                 | `STRING` | yes       | Address from                | `test@example.com`                                              |
+| `replyTo`              | `STRING` | no        | Reply to                    | `test@example.com`                                              |
 | `as`                   | `STRING` | yes       | Send as                     | `Full name `                                                    |
 | `subject`              | `STRING` | yes       | Message subject             | `Sending an e-mail to you`                                      |
 | `message`              | `STRING` | yes       | Message body                | `<p>Body in HTML</p>`                                           |
