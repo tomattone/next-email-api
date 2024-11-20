@@ -63,7 +63,18 @@ async function handler(
       fields.as[0]
     )
 
-    // 4 - Set blind carbon copy
+    // 4 - Set carbon copy and blind carbon copy
+    let cc: any = []
+    if (req.body.cc) {
+      if (!Array.isArray(req.body.cc)) {
+        cc = [new Recipient(req.body.cc)]
+      } else {
+        req.body.cc.forEach((recipient: string) => {
+          cc.push(new Recipient(recipient))
+        })
+      }
+    }
+
     let bcc: any = []
     if (req.body.bcc) {
       if (!Array.isArray(req.body.bcc)) {
