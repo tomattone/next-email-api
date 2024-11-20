@@ -20,6 +20,7 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseProps>
 ) {
+
   // Wrong http method
   if (req.method !== 'POST') {
     res.status(400).json({ status: 400, message: 'Wrong http method' })
@@ -52,76 +53,32 @@ async function handler(
     })
     const { fields, files } = data
 
-    // 3 - Set recipients
-    let recipients: any = []
-    if (req.body.to) {
-      if (!Array.isArray(req.body.to)) {
-        recipients = [new Recipient(req.body.to)]
-      } else {
-        req.body.to.forEach((recipient: string) => {
-          recipients.push(new Recipient(recipient))
-        })
-      }
-    }
-
-    // 4 - Set carbon copy
-    let cc: any = []
-    if (req.body.cc) {
-      if (!Array.isArray(req.body.cc)) {
-        cc = [new Recipient(req.body.cc)]
-      } else {
-        req.body.cc.forEach((recipient: string) => {
-          cc.push(new Recipient(recipient))
-        })
-      }
-    }
-
-    // 5 - Set blind carbon copy
-    let bcc: any = []
-    if (req.body.bcc) {
-      if (!Array.isArray(req.body.bcc)) {
-        bcc = [new Recipient(req.body.bcc)]
-      } else {
-        req.body.bcc.forEach((recipient: string) => {
-          bcc.push(new Recipient(recipient))
-        })
-      }
-    }
-
-    // 6 - Set reply to
-    let replyTo = new Sender(req.body.from, req.body.as)
-    if (req.body.replyTo) {
-      replyTo = new Sender(req.body.replyTo)
-    }
-
-    // 7 - multi attach
-    const attachments: any = []
-    if (files.attach && Array.isArray(files.attach)) {
-      attachments.push(
-        ...files.attach.map(
-          (attachFile: { path: string; originalFilename: string }) => {
-            const fileContent = fs.readFileSync(attachFile.path, {
-              encoding: 'base64',
-            })
-            return new Attachment(
-              fileContent,
-              attachFile.originalFilename,
-              'attachment'
-            )
-          }
-        )
-      )
-    }
-
-    // 8 - Setup required fields
+    // 3 - Setup required fields
     const subject = fields.subject[0]
     const message = fields.message[0]
+    const replyTo = new Sender(fields.from[0], fields.as[0])
+    const recipients = [new Recipient(fields.to[0])]
     const sentFrom = new Sender(
       'api-mailersend-transaction@tomazzoni.net',
       fields.as[0]
     )
 
-    // 9 - Send email
+    // 4 - Setup optional fields
+    const cc = fields.cc ? [new Recipient(fields.cc)] : []
+    const bcc = fields.bcc ? [new Recipient(fields.bcc)] : []
+
+    // 4.1 - multi attach
+    const attachments: any = [];
+    if (files.attach && Array.isArray(files.attach)) {
+      attachments.push(
+        ...files.attach.map((attachFile: { path: string, originalFilename: string }) => {
+          const fileContent = fs.readFileSync(attachFile.path, { encoding: 'base64' });
+          return new Attachment(fileContent, attachFile.originalFilename, 'attachment');
+        })
+      );
+    }
+
+    // 5 - Send email
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
       .setReplyTo(replyTo)
@@ -135,13 +92,13 @@ async function handler(
 
     await mailerSend.email.send(emailParams)
 
-    // 10 - Send response
+    // 6 - Send response
     res.status(200).json({
       status: 200,
       message: 'Queued. Thank you.',
     })
   } catch (error: any) {
-    // 11 - Shit happens
+    // 7 - Shit happens
     res.status(400).json({ status: 400, message: error.body.message })
   }
 }
