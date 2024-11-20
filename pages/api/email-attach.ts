@@ -63,9 +63,17 @@ async function handler(
       fields.as[0]
     )
 
-    // 4 - Setup optional fields
-    const cc = fields.cc ? [new Recipient(fields.cc)] : []
-    const bcc = fields.bcc ? [new Recipient(fields.bcc)] : []
+    // 4 - Set blind carbon copy
+    let bcc: any = []
+    if (req.body.bcc) {
+      if (!Array.isArray(req.body.bcc)) {
+        bcc = [new Recipient(req.body.bcc)]
+      } else {
+        req.body.bcc.forEach((recipient: string) => {
+          bcc.push(new Recipient(recipient))
+        })
+      }
+    }
 
     // 4.1 - multi attach
     const attachments: any = [];
