@@ -1,15 +1,13 @@
 import fs from 'fs'
-import {
-  Attachment,
-  EmailParams,
-  MailerSend,
-  Recipient,
-  Sender,
-} from 'mailersend'
 import multiparty from 'multiparty'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import sendpulse from 'sendpulse-api'
 
 import cors from '../../utils/cors'
+
+var API_USER_ID = process.env.API_USER_ID || ''
+var API_SECRET = process.env.API_SECRET || ''
+var TOKEN_STORAGE = "/tmp/";
 
 type ResponseProps = {
   status: number
@@ -33,10 +31,18 @@ async function handler(
   }
 
   try {
-    // 1 - Setup MailerSend library
-    const mailerSend = new MailerSend({
-      apiKey: process.env.MAILERSEND_API_KEY || '',
+    // 1 - Setup Sendpulse library
+    sendpulse.init(API_USER_ID, API_SECRET, TOKEN_STORAGE, function (token: any) {
+      if (token && token.is_error) {
+        res.status(400).json({ status: 500, message: token.error })
+        return false
+      }
     })
+
+    var answerGetter = function (data: any) {
+      console.log(data);
+    }
+
 
     // 2 - Setup Multiparty library
     const form = new multiparty.Form()
@@ -53,44 +59,75 @@ async function handler(
     })
     const { fields, files } = data
 
-    // 3 - Setup required fields
-    const subject = fields.subject[0]
-    const message = fields.message[0]
-    const replyTo = new Sender(fields.from[0], fields.as[0])
-    const recipients = [new Recipient(fields.to[0])]
-    const sentFrom = new Sender(
-      'api-mailersend-transaction@tomazzoni.net',
-      fields.as[0]
-    )
-
-    // 4 - Setup optional fields
-    const cc = fields.cc ? [new Recipient(fields.cc)] : []
-    const bcc = fields.bcc ? [new Recipient(fields.bcc)] : []
-
-    // 4.1 - multi attach
     const attachments: any = [];
     if (files.attach && Array.isArray(files.attach)) {
       attachments.push(
         ...files.attach.map((attachFile: { path: string, originalFilename: string }) => {
           const fileContent = fs.readFileSync(attachFile.path, { encoding: 'base64' });
-          return new Attachment(fileContent, attachFile.originalFilename, 'attachment');
+          return {
+            "name": attachFile.originalFilename,
+            "content": fileContent
+          }
         })
       );
-    }
+    };
+
+    var email = {
+      "html": fields.message[0],
+      "text": fields.message[0].replace(/(<([^>]+)>)/gi, ""),
+      "subject": fields.subject[0],
+      "from": {
+        "name": fields.as[0],
+        "email": "oi@tomazzoni.net"
+      },
+      "to": [
+        {
+          "name": fields.to[0],
+          "email": fields.to[0]
+        },
+      ],
+      "cc": [
+        {
+          "name": fields.cc,
+          "email": fields.cc
+        },
+      ],
+      "bcc": [
+        {
+          "name": fields.bcc,
+          "email": fields.bcc
+        },
+      ],
+      "attachments": attachments
+    };
+
+    // 3 - Setup required fields
+    // const subject = fields.subject[0]
+    // const message = fields.message[0]
+    // const replyTo = new Sender(fields.from[0], fields.as[0])
+    // const recipients = [new Recipient(fields.to[0])]
+    // const sentFrom = new Sender(
+    //   'api-mailersend-transaction@tomazzoni.net',
+    //   fields.as[0]
+    // )
+
+    // 4 - Setup optional fields
+    // const cc = fields.cc ? [new Recipient(fields.cc)] : []
+    // const bcc = fields.bcc ? [new Recipient(fields.bcc)] : []
+
+    // 4.1 - multi attach
+    // const attachments: any = [];
+    // if (files.attach && Array.isArray(files.attach)) {
+    //   attachments.push(
+    //     ...files.attach.map((attachFile: { path: string, originalFilename: string }) => {
+    //       const fileContent = fs.readFileSync(attachFile.path, { encoding: 'base64' });
+    //       return new Attachment(fileContent, attachFile.originalFilename, 'attachment');
+    //     })
+    //   );
+    // }
 
     // 5 - Send email
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setReplyTo(replyTo)
-      .setTo(recipients)
-      .setCc(cc)
-      .setBcc(bcc)
-      .setSubject(subject)
-      .setHtml(message)
-      .setText(message.replace(/(<([^>]+)>)/gi, ''))
-      .setAttachments(attachments)
-
-    await mailerSend.email.send(emailParams)
+    sendpulse.smtpSendMail(answerGetter, email);
 
     // 6 - Send response
     res.status(200).json({

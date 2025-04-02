@@ -1,5 +1,5 @@
-import { EmailParams, MailerSend, Recipient, Sender } from 'mailersend'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { createTransport } from 'nodemailer'
 
 import cors from '../../utils/cors'
 
@@ -24,83 +24,46 @@ async function handler(
     return false
   }
 
+  // 1 - Setup Nodemailer
+  const host = process.env.SMTP_HOST
+  const port = parseInt(process.env.SMTP_PORT || '587')
+  const user = process.env.SMTP_USER
+  const pass = process.env.SMTP_PASS
+
+  const transporter = createTransport({
+    host: host,
+    port: port,
+    auth: {
+      user: user,
+      pass: pass
+    }
+  });
+
+  // 1.1 - Verify connection configuration
+  transporter.verify(function (error) {
+    if (error) {
+      res.status(535).json({ status: 535, message: error.message })
+    }
+  });
+
   try {
-    // 1 - Setup MailerSend library
-    const mailerSend = new MailerSend({
-      apiKey: process.env.MAILERSEND_API_KEY || '',
+    // 2 - Send email
+    const fields = req.body
+    const mail = await transporter.sendMail({
+      from: `${fields.as} <oi@tomazzoni.net>`,
+      to: fields.to,
+      replyTo: fields.to,
+      subject: fields.subject,
+      html: fields.message,
+      text: fields.message.replace(/<[^>]*>?/gm, ''),
+      cc: fields.cc,
+      bcc: fields.bcc
     })
 
-    // 2 - Set recipients
-    let recipients: any = []
-    if (req.body.to) {
-      if (!Array.isArray(req.body.to)) {
-        recipients = [new Recipient(req.body.to)]
-      } else {
-        req.body.to.forEach((recipient: string) => {
-          recipients.push(new Recipient(recipient))
-        })
-      }
-    }
+    res.status(200).json({ status: 200, message: mail.response })
 
-    // 3 - Set carbon copy
-    let cc: any = []
-    if (req.body.cc) {
-      if (!Array.isArray(req.body.cc)) {
-        cc = [new Recipient(req.body.cc)]
-      } else {
-        req.body.cc.forEach((recipient: string) => {
-          cc.push(new Recipient(recipient))
-        })
-      }
-    }
-
-    // 4 - Set blind carbon copy
-    let bcc: any = []
-    if (req.body.bcc) {
-      if (!Array.isArray(req.body.bcc)) {
-        bcc = [new Recipient(req.body.bcc)]
-      } else {
-        req.body.bcc.forEach((recipient: string) => {
-          bcc.push(new Recipient(recipient))
-        })
-      }
-    }
-
-    // 5 - Set reply to
-    let replyTo = new Sender(req.body.from, req.body.as)
-    if (req.body.replyTo) {
-      replyTo = new Sender(req.body.replyTo)
-    }
-
-    // 6 - Setup required fields
-    const subject = req.body.subject
-    const message = req.body.message
-    const sentFrom = new Sender(
-      'api-mailersend-transaction@tomazzoni.net',
-      req.body.as
-    )
-
-    // 7 - Send email
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setReplyTo(replyTo)
-      .setTo(recipients)
-      .setCc(cc)
-      .setBcc(bcc)
-      .setSubject(subject)
-      .setHtml(message)
-      .setText(message.replace(/(<([^>]+)>)/gi, ''))
-
-    await mailerSend.email.send(emailParams)
-
-    // 8 - Send response
-    res.status(200).json({
-      status: 200,
-      message: 'Queued. Thank you.',
-    })
   } catch (error: any) {
-    // 9 - Shit happens
-    res.status(400).json({ status: 400, message: error.body.message })
+    res.status(400).json({ status: 400, message: error.message })
   }
 }
 
