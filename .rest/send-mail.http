@@ -1,0 +1,9 @@
+POST https://api.tomazzoni.net/email
+Content-Type: application/json
+
+{
+  "as": "Tomazzoni",
+  "to": "juniortomazzoni@gmail.com",
+  "subject": "Hello",
+  "message": "Hello <b>World</b>"
+}
