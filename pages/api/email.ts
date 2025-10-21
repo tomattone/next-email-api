@@ -1,7 +1,7 @@
-import { EmailParams, MailerSend, Recipient, Sender } from 'mailersend'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 import cors from '../../utils/cors'
+import { Resend } from 'resend'
 
 type ResponseProps = {
   status: number
@@ -25,19 +25,17 @@ async function handler(
   }
 
   try {
-    // 1 - Setup MailerSend library
-    const mailerSend = new MailerSend({
-      apiKey: process.env.MAILERSEND_API_KEY || '',
-    })
+    // 1 - Setup Resend library
+    const resend = new Resend(process.env.SMTP_PASS)
 
     // 2 - Set recipients
     let recipients: any = []
     if (req.body.to) {
       if (!Array.isArray(req.body.to)) {
-        recipients = [new Recipient(req.body.to)]
+        recipients = [req.body.to]
       } else {
         req.body.to.forEach((recipient: string) => {
-          recipients.push(new Recipient(recipient))
+          recipients.push(recipient)
         })
       }
     }
@@ -46,10 +44,10 @@ async function handler(
     let cc: any = []
     if (req.body.cc) {
       if (!Array.isArray(req.body.cc)) {
-        cc = [new Recipient(req.body.cc)]
+        cc = [req.body.cc]
       } else {
         req.body.cc.forEach((recipient: string) => {
-          cc.push(new Recipient(recipient))
+          cc.push(recipient)
         })
       }
     }
@@ -58,49 +56,49 @@ async function handler(
     let bcc: any = []
     if (req.body.bcc) {
       if (!Array.isArray(req.body.bcc)) {
-        bcc = [new Recipient(req.body.bcc)]
+        bcc = [req.body.bcc]
       } else {
         req.body.bcc.forEach((recipient: string) => {
-          bcc.push(new Recipient(recipient))
+          bcc.push(recipient)
         })
       }
     }
 
     // 5 - Set reply to
-    let replyTo = new Sender(req.body.from, req.body.as)
+    let replyTo = req.body.from
     if (req.body.replyTo) {
-      replyTo = new Sender(req.body.replyTo)
+      replyTo = req.body.replyTo
     }
 
     // 6 - Setup required fields
     const subject = req.body.subject
     const message = req.body.message
-    const sentFrom = new Sender(
-      'api-mailersend-transaction@tomazzoni.net',
-      req.body.as
-    )
+    const sentFrom = req.body.as + '<api-mailersend-transaction@tomazzoni.net>'
 
     // 7 - Send email
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setReplyTo(replyTo)
-      .setTo(recipients)
-      .setCc(cc)
-      .setBcc(bcc)
-      .setSubject(subject)
-      .setHtml(message)
-      .setText(message.replace(/(<([^>]+)>)/gi, ''))
+    const { data, error } = await resend.emails.send({
+      from: sentFrom,
+      replyTo: replyTo,
+      to: recipients,
+      cc: cc,
+      bcc: bcc,
+      subject: subject,
+      html: message,
+      text: message.replace(/(<([^>]+)>)/gi, ''),
+    })
 
-    await mailerSend.email.send(emailParams)
+    // 8 - Shit happens
+    if (error) {
+      return res.status(400).json({ status: 400, message: error.message })
+    }
 
-    // 8 - Send response
+    // 9 - Send response
     res.status(200).json({
       status: 200,
-      message: 'Queued. Thank you.',
+      message: 'Queued. Thank you. ID: ' + data.id,
     })
   } catch (error: any) {
-    // 9 - Shit happens
-    res.status(400).json({ status: 400, message: error.body.message })
+    res.status(400).json({ status: 400, message: error.message })
   }
 }
 

@@ -1,15 +1,10 @@
 import fs from 'fs'
-import {
-  Attachment,
-  EmailParams,
-  MailerSend,
-  Recipient,
-  Sender,
-} from 'mailersend'
 import multiparty from 'multiparty'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 import cors from '../../utils/cors'
+import { Resend } from 'resend'
+import path from 'path'
 
 type ResponseProps = {
   status: number
@@ -20,7 +15,6 @@ async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseProps>
 ) {
-
   // Wrong http method
   if (req.method !== 'POST') {
     res.status(400).json({ status: 400, message: 'Wrong http method' })
@@ -33,16 +27,14 @@ async function handler(
   }
 
   try {
-    // 1 - Setup MailerSend library
-    const mailerSend = new MailerSend({
-      apiKey: process.env.MAILERSEND_API_KEY || '',
-    })
+    // 1 - Setup Resend library
+    const resend = new Resend(process.env.SMTP_PASS)
 
     // 2 - Setup Multiparty library
     const form = new multiparty.Form()
 
     // 2.1 - Get data from request
-    const data: any = await new Promise((resolve, reject) => {
+    const ReqData: any = await new Promise((resolve, reject) => {
       form.parse(req, function (err, fields, files) {
         if (err) {
           res.status(400).json({ status: 500, message: err.message })
@@ -51,55 +43,62 @@ async function handler(
         resolve({ fields, files })
       })
     })
-    const { fields, files } = data
+    const { fields, files } = ReqData
 
     // 3 - Setup required fields
     const subject = fields.subject[0]
     const message = fields.message[0]
-    const replyTo = new Sender(fields.from[0], fields.as[0])
-    const recipients = [new Recipient(fields.to[0])]
-    const sentFrom = new Sender(
-      'api-mailersend-transaction@tomazzoni.net',
-      fields.as[0]
-    )
+    const replyTo = fields.from[0]
+    const recipients = [fields.to[0]]
+    const sentFrom = fields.as[0] + '<api-mailersend-transaction@tomazzoni.net>'
 
     // 4 - Setup optional fields
-    const cc = fields.cc ? [new Recipient(fields.cc)] : []
-    const bcc = fields.bcc ? [new Recipient(fields.bcc)] : []
+    const cc = fields.cc ? [fields.cc] : []
+    const bcc = fields.bcc ? [fields.bcc] : []
 
     // 4.1 - multi attach
-    const attachments: any = [];
+    const attachments: any = []
     if (files.attach && Array.isArray(files.attach)) {
       attachments.push(
-        ...files.attach.map((attachFile: { path: string, originalFilename: string }) => {
-          const fileContent = fs.readFileSync(attachFile.path, { encoding: 'base64' });
-          return new Attachment(fileContent, attachFile.originalFilename, 'attachment');
-        })
-      );
+        ...files.attach.map(
+          (attachFile: { path: string; originalFilename: string }) => {
+            const fileContent = fs.readFileSync(attachFile.path, {
+              encoding: 'base64',
+            })
+            return {
+              content: fileContent,
+              filename: attachFile.originalFilename,
+            }
+          }
+        )
+      )
     }
 
     // 5 - Send email
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setReplyTo(replyTo)
-      .setTo(recipients)
-      .setCc(cc)
-      .setBcc(bcc)
-      .setSubject(subject)
-      .setHtml(message)
-      .setText(message.replace(/(<([^>]+)>)/gi, ''))
-      .setAttachments(attachments)
+    const { data, error } = await resend.emails.send({
+      from: sentFrom,
+      replyTo: replyTo,
+      to: recipients,
+      cc: cc,
+      bcc: bcc,
+      subject: subject,
+      html: message,
+      text: message.replace(/(<([^>]+)>)/gi, ''),
+      attachments: attachments,
+    })
 
-    await mailerSend.email.send(emailParams)
+    // 6 - Shit happens
+    if (error) {
+      return res.status(400).json({ status: 400, message: error.message })
+    }
 
-    // 6 - Send response
+    // 7 - Send response
     res.status(200).json({
       status: 200,
-      message: 'Queued. Thank you.',
+      message: 'Queued. Thank you. ID: ' + data.id,
     })
   } catch (error: any) {
-    // 7 - Shit happens
-    res.status(400).json({ status: 400, message: error.body.message })
+    res.status(400).json({ status: 400, message: error.message })
   }
 }
 

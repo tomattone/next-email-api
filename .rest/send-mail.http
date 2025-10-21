@@ -1,8 +1,9 @@
-POST https://api.tomazzoni.net/email
+POST http://localhost:3000/email
 Content-Type: application/json
 
 {
-  "as": "Tomazzoni",
+  "from": "teste@stelladiamonds.com.br",
+  "as": "Stella Diamonds",
   "to": "juniortomazzoni@gmail.com",
   "subject": "Hello",
   "message": "Hello <b>World</b>"
