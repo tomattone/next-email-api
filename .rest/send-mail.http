@@ -2,9 +2,9 @@ POST http://localhost:3000/email
 Content-Type: application/json
 
 {
-  "from": "teste@stelladiamonds.com.br",
-  "as": "Stella Diamonds",
+  "from": "naoresponda@soldeamericalab.com.br",
+  "as": "Sol de América Lab",
   "to": "juniortomazzoni@gmail.com",
-  "subject": "Hello",
+  "subject": "Teste",
   "message": "Hello <b>World</b>"
 }

@@ -50,7 +50,7 @@ async function handler(
     const message = fields.message[0]
     const replyTo = fields.from[0]
     const recipients = [fields.to[0]]
-    const sentFrom = fields.as[0] + '<api-mailersend-transaction@tomazzoni.net>'
+    const sentFrom = fields.as[0] + '<noreply@transacional.tomazzoni.net>'
 
     // 4 - Setup optional fields
     const cc = fields.cc ? [fields.cc] : []

@@ -73,7 +73,7 @@ async function handler(
     // 6 - Setup required fields
     const subject = req.body.subject
     const message = req.body.message
-    const sentFrom = req.body.as + '<api-mailersend-transaction@tomazzoni.net>'
+    const sentFrom = req.body.as + '<noreply@transacional.tomazzoni.net>'
 
     // 7 - Send email
     const { data, error } = await resend.emails.send({
